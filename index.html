@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f0f9ff">
     
-    <title>Jasper P3 直式挑戰 (乘法升級版)</title>
+    <title>Jasper P3 直式挑戰 (唯一解+草稿區版)</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -23,13 +23,29 @@
         input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* 防止 iOS safari 在橫向時放大字體 */
         html { -webkit-text-size-adjust: 100%; }
         
-        /* 訂製捲軸 */
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* --- 新增：算草區樣式 (用戶指定) --- */
+        .carry-input {
+            width: 100%;
+            height: 30px; /* 較矮 */
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #ef4444; /* 紅色字 */
+            background-color: transparent;
+            border: 2px dashed #fda4af; /* 虛線框，稍微加粗以便點擊 */
+            border-radius: 4px;
+            outline: none;
+        }
+        .carry-input:focus {
+            background-color: #fff1f2;
+            border-color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -45,37 +61,35 @@
         
         const playSound = (type) => {
             if (audioCtx.state === 'suspended') audioCtx.resume();
-            
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-            
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            
             const now = audioCtx.currentTime;
-
+            
             if (type === 'success') {
-                // P3 風格：更有科技感的正確音
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(660, now); 
-                oscillator.frequency.exponentialRampToValueAtTime(880, now + 0.1);
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.3, now + 0.05);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                oscillator.start(now);
-                oscillator.stop(now + 0.3);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(660, now); 
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
             } else if (type === 'error') {
-                oscillator.type = 'sawtooth';
-                oscillator.frequency.setValueAtTime(220, now); 
-                oscillator.frequency.linearRampToValueAtTime(150, now + 0.2);
-                gainNode.gain.setValueAtTime(0, now);
-                gainNode.gain.linearRampToValueAtTime(0.2, now + 0.05);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
-                oscillator.start(now);
-                oscillator.stop(now + 0.3);
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now); 
+                osc.frequency.linearRampToValueAtTime(150, now + 0.2);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
             } else if (type === 'win') {
-                oscillator.type = 'triangle';
-                // 勝利和弦
                 [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
                     const osc = audioCtx.createOscillator();
                     const gn = audioCtx.createGain();
@@ -90,36 +104,34 @@
             }
         };
 
-        // --- 獨立計時器 ---
         const TimerDisplay = memo(({ startTime }) => {
             const [time, setTime] = useState(0);
             useEffect(() => {
                 if (!startTime) return;
-                const interval = setInterval(() => {
-                    setTime(Math.floor((Date.now() - startTime) / 1000));
-                }, 1000);
+                const interval = setInterval(() => setTime(Math.floor((Date.now() - startTime) / 1000)), 1000);
                 return () => clearInterval(interval);
             }, [startTime]);
-
-            return (
-                <span className="font-mono text-slate-400 font-bold text-xl">
-                    {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}
-                </span>
-            );
+            return <span className="font-mono text-slate-400 font-bold text-xl">{Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}</span>;
         });
 
-        // --- 單個數字格 (升級支援百位) ---
+        // --- 草稿區/進位格 ---
+        const CarrySlot = () => {
+            return (
+                <div className="flex items-end justify-center pb-1">
+                     <input type="tel" className="carry-input math-font" />
+                </div>
+            );
+        };
+
+        // --- 數字格 ---
         const DigitSlot = ({ q, type, row, userInputs, mode, onInput }) => {
             const key = `${type}_${row}`;
             const isBlank = q.blanks.includes(key);
             const value = q.digits[key];
-            const isLeadingZero = (value === 0 && (row === 'h' || (row === 't' && q.digits[`${type}_h`] === 0)));
 
-            // 處理隱藏邏輯：如果是首位且為0，且不是填空題，則不顯示
-            // 但如果是填空題，即使是0也要顯示格子(雖然P3題目設計避免首位為0的填空，但保留邏輯)
-            if (value === 0 && row === 'h' && !isBlank) {
-                 return <div className="w-10 h-14 md:w-12 md:h-16"></div>; // 佔位但不可見
-            }
+            // 隱藏前導零 (視覺優化)
+            if (value === 0 && row === 'h' && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
+            if (value === 0 && row === 't' && q.digits[`${type}_h`] === 0 && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
 
             if (isBlank) {
                 const inputValue = userInputs[key] || '';
@@ -140,13 +152,6 @@
                     />
                 );
             } else {
-                // 如果是十位數的0，且百位是0 (即單個位數)，是否隱藏？
-                // 這裡簡化邏輯：只有純粹的 leading zero (百位) 隱藏。
-                // 若數字是 5 (005)，t也要隱藏。
-                if (value === 0 && row === 't' && q.digits[`${type}_h`] === 0 && !isBlank) {
-                    return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
-                }
-
                 return (
                     <div className="w-10 h-14 md:w-12 md:h-16 flex items-center justify-center text-3xl md:text-4xl font-black text-slate-700 math-font">
                         {value}
@@ -155,7 +160,7 @@
             }
         };
 
-        // --- 問題卡片 (升級 4 欄佈局：符號 H T O) ---
+        // --- 問題卡片 ---
         const QuestionCard = ({ q, index, userInputs, mode, feedback, onInput, onSubmit, startTime }) => {
             if (!q) return null;
 
@@ -169,16 +174,22 @@
                     </div>
 
                     <div className="flex flex-col items-center">
-                        {/* Grid: Symbol, H, T, O */}
+                        {/* Grid 結構：新增最上層的算草區 */}
                         <div className="grid grid-cols-[1.5rem_3rem_3rem_3rem] md:grid-cols-[2rem_3.5rem_3.5rem_3.5rem] gap-y-1 gap-x-1 items-center justify-center">
                             
-                            {/* N1 */}
+                            {/* --- Row 0: 算草區 (Carry/Drafting) --- */}
+                            <div></div> {/* 符號欄空白 */}
+                            <CarrySlot />
+                            <CarrySlot />
+                            <CarrySlot />
+
+                            {/* --- Row 1: N1 --- */}
                             <div></div>
                             <DigitSlot q={q} type="n1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* Op1 N2 */}
+                            {/* --- Row 2: Op1 N2 --- */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op1 === '*' ? '×' : q.op1}</div>
                             <DigitSlot q={q} type="n2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
@@ -187,13 +198,13 @@
                             {/* Line 1 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* R1 */}
+                            {/* --- Row 3: R1 --- */}
                             <div></div>
                             <DigitSlot q={q} type="r1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* Op2 N3 */}
+                            {/* --- Row 4: Op2 N3 --- */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op2 === '*' ? '×' : q.op2}</div>
                             <DigitSlot q={q} type="n3" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
@@ -202,7 +213,7 @@
                             {/* Line 2 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* R2 */}
+                            {/* --- Row 5: R2 --- */}
                             <div></div>
                             <DigitSlot q={q} type="r2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
@@ -235,13 +246,12 @@
             );
         };
 
-        // --- 報告卡片 ---
         const ReportCard = ({ history, totalTime, onRestart }) => {
             const wrongQuestions = history.filter(h => !h.passedFirstTry);
             const score = Math.round(((TOTAL_QUESTIONS - wrongQuestions.length) / TOTAL_QUESTIONS) * 100);
 
             useEffect(() => {
-                if (score >= 80) { // 80分以上就慶祝，鼓勵 Jasper!
+                if (score >= 80) {
                     playSound('win');
                     const duration = 3 * 1000;
                     const animationEnd = Date.now() + duration;
@@ -297,7 +307,6 @@
             );
         };
 
-        // --- 主程式邏輯 ---
         const App = () => {
             const [step, setStep] = useState('menu');
             const [qIndex, setQIndex] = useState(0);
@@ -309,7 +318,7 @@
             const [startTime, setStartTime] = useState(null);
             const [finalTime, setFinalTime] = useState(0);
 
-            // *** P3 核心邏輯：支援乘法與三位數 ***
+            // *** 核心邏輯修正：唯一解生成器 ***
             const generateQuestions = useCallback(() => {
                 let newQs = [];
                 for(let i=0; i<TOTAL_QUESTIONS; i++) {
@@ -320,60 +329,41 @@
                         let n1, n2, n3, r1, r2, op1, op2;
                         let validNums = false;
                         
-                        // 1. 生成算式邏輯 (P3 難度)
+                        // 1. 生成數學式
                         while(!validNums) {
-                            // Step 1
                             op1 = ['+', '-', '*'][Math.floor(Math.random() * 3)];
-                            
                             if (op1 === '*') {
-                                n1 = Math.floor(Math.random() * 80) + 10; // 10-89
-                                n2 = Math.floor(Math.random() * 8) + 2;   // 2-9 (乘法個位數)
+                                n1 = Math.floor(Math.random() * 80) + 10; 
+                                n2 = Math.floor(Math.random() * 8) + 2;   
                                 r1 = n1 * n2;
                             } else {
                                 n1 = Math.floor(Math.random() * 89) + 10;
                                 n2 = Math.floor(Math.random() * 89) + 10;
                                 r1 = op1 === '+' ? n1 + n2 : n1 - n2;
                             }
-                            
-                            // 限制 R1 範圍 (確保不超過三位數，且不為負)
                             if (r1 > 999 || r1 < 10) continue;
 
-                            // Step 2
                             op2 = ['+', '-', '*'][Math.floor(Math.random() * 3)];
-
                             if (op2 === '*') {
-                                // 如果第二步是乘法，R1 是被乘數
-                                // 限制：R1 不能太大，否則 R2 會爆掉 999
                                 if (r1 > 100) { 
-                                    // 如果 R1 已經很大，強制改成減法，避免爆框
                                     op2 = '-'; 
                                     n3 = Math.floor(Math.random() * (r1 - 10)) + 5;
                                     r2 = r1 - n3;
                                 } else {
-                                    n3 = Math.floor(Math.random() * 8) + 2; // 2-9
+                                    n3 = Math.floor(Math.random() * 8) + 2; 
                                     r2 = r1 * n3;
                                 }
                             } else {
                                 n3 = Math.floor(Math.random() * 89) + 10;
                                 r2 = op2 === '+' ? r1 + n3 : r1 - n3;
                             }
-
-                            // 最終檢查 R2
                             if (r2 > 0 && r2 < 1000) validNums = true; 
                         }
 
-                        // 2. 拆解數字到位數 (H, T, O)
-                        const getDigits = (n) => ({
-                            h: Math.floor(n / 100),
-                            t: Math.floor((n % 100) / 10),
-                            o: n % 10
-                        });
-
-                        const d_n1 = getDigits(n1);
-                        const d_n2 = getDigits(n2);
-                        const d_r1 = getDigits(r1);
-                        const d_n3 = getDigits(n3);
-                        const d_r2 = getDigits(r2);
+                        // 2. 拆分位數
+                        const getDigits = (n) => ({ h: Math.floor(n / 100), t: Math.floor((n % 100) / 10), o: n % 10 });
+                        const d_n1 = getDigits(n1); const d_n2 = getDigits(n2); const d_r1 = getDigits(r1);
+                        const d_n3 = getDigits(n3); const d_r2 = getDigits(r2);
 
                         const digits = {
                             'n1_h': d_n1.h, 'n1_t': d_n1.t, 'n1_o': d_n1.o,
@@ -383,11 +373,9 @@
                             'r2_h': d_r2.h, 'r2_t': d_r2.t, 'r2_o': d_r2.o,
                         };
 
-                        // 3. 挖空邏輯 (P3 升級版)
-                        // 確保至少挖掉兩個，但不超過四個，且不會造成多重解
-                        // 這裡使用簡化的約束檢查：每一行(row)不要挖超過2個數字，避免過度困難
+                        // 3. 挖空與唯一解檢查 (關鍵修正)
                         const allKeys = Object.keys(digits).filter(k => {
-                            // 不挖前導零 (Visual noise)
+                            // 不挖前導零
                             if (k.endsWith('_h') && digits[k] === 0) return false;
                             if (k.endsWith('_t') && digits[k.replace('_t', '_h')] === 0 && digits[k] === 0) return false;
                             return true;
@@ -396,15 +384,34 @@
                         const shuffledKeys = allKeys.sort(() => 0.5 - Math.random());
                         let currentBlanks = [];
                         
-                        // 嘗試挖空
+                        // 定義互斥組：同一行運算數不可同時挖空 (例如 n1_o 和 n2_o 不能同時為空)
+                        const conflictPairs = [
+                            ['n1_o', 'n2_o'], ['n1_t', 'n2_t'], ['n1_h', 'n2_h'], // Step 1 Conflicts
+                            ['r1_o', 'n3_o'], ['r1_t', 'n3_t'], ['r1_h', 'n3_h']  // Step 2 Conflicts
+                        ];
+
                         for (let key of shuffledKeys) {
-                            // 規則：如果這個數字是個位數乘法中的乘數 (例如 x 3)，不要挖掉它，除非是很簡單的
-                            // 這裡為了遊戲性，隨機挖
-                            currentBlanks.push(key);
+                            // 檢查是否會造成互斥
+                            let isConflict = false;
+                            
+                            // 預設將此 key 加入測試
+                            const testBlanks = [...currentBlanks, key];
+                            
+                            for (let pair of conflictPairs) {
+                                // 如果這一對都在目前的挖空名單中，則產生衝突 (無限多解)
+                                if (testBlanks.includes(pair[0]) && testBlanks.includes(pair[1])) {
+                                    isConflict = true;
+                                    break;
+                                }
+                            }
+
+                            if (!isConflict) {
+                                currentBlanks.push(key);
+                            }
+                            
                             if (currentBlanks.length >= 4) break;
                         }
 
-                        // 基本檢查：至少挖2格
                         if (currentBlanks.length >= 2) {
                             validPuzzle = true;
                             puzzleData = { id: i, n1, n2, n3, r1, r2, op1, op2, digits, blanks: currentBlanks };
@@ -435,20 +442,15 @@
                 } else if (mode === 'retry') {
                     const currentQ = questions[qIndex];
                     const correctVal = currentQ.digits[key].toString();
-                    
                     if (num === correctVal) {
                         playSound('success');
                         setUserInputs(prev => ({ ...prev, [key]: num }));
                         setFeedback({ type: 'success', msg: 'Correct! Next one.' });
                         const remaining = currentQ.blanks.filter(b => b !== key && userInputs[b] !== currentQ.digits[b].toString());
-                        if (remaining.length === 0) {
-                            setTimeout(() => nextQuestion(), 500);
-                        }
+                        if (remaining.length === 0) setTimeout(() => nextQuestion(), 500);
                     } else {
                         playSound('error');
-                        let hint = "Try again!";
-                        if (key.includes('_o')) hint = "Hint: Start from the right (Ones).";
-                        setFeedback({ type: 'error', msg: `Oops! ${hint}` });
+                        setFeedback({ type: 'error', msg: `Oops! Try again.` });
                     }
                 }
             };
@@ -461,12 +463,8 @@
                     playSound('error');
                     return;
                 }
-
                 let allCorrect = true;
-                currentQ.blanks.forEach(key => {
-                    if (userInputs[key] !== currentQ.digits[key].toString()) allCorrect = false;
-                });
-
+                currentQ.blanks.forEach(key => { if (userInputs[key] !== currentQ.digits[key].toString()) allCorrect = false; });
                 if (allCorrect) {
                     playSound('success');
                     setHistory([...history, { ...currentQ, passedFirstTry: true }]);
@@ -477,8 +475,7 @@
                     setUserInputs({});
                     setFeedback({ type: 'error', msg: 'Calculation error. Let\'s fix it!' });
                     let newHistory = [...history];
-                    const existing = newHistory.find(h => h.id === currentQ.id);
-                    if (!existing) newHistory.push({ ...currentQ, passedFirstTry: false });
+                    if (!newHistory.find(h => h.id === currentQ.id)) newHistory.push({ ...currentQ, passedFirstTry: false });
                     setHistory(newHistory);
                 }
             };
@@ -501,13 +498,12 @@
                         <div className="text-center bg-white p-10 rounded-[2.5rem] shadow-xl max-w-lg w-full fade-in border-4 border-white ring-4 ring-indigo-50">
                             <div className="text-6xl mb-4">🚀</div>
                             <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">Jasper P3 Challenge</h1>
-                            <p className="text-slate-500 mb-8 font-bold text-lg">加、減、乘 混合特訓！</p>
+                            <p className="text-slate-500 mb-8 font-bold text-lg">唯一解驗證 + 草稿區升級版</p>
                             <button onClick={startQuiz} className="w-full bg-indigo-600 text-white py-5 rounded-2xl text-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
                                 Start Game
                             </button>
                         </div>
                     )}
-
                     {step === 'quiz' && (
                         <QuestionCard 
                             q={questions[qIndex]} 
@@ -520,14 +516,7 @@
                             startTime={startTime}
                         />
                     )}
-
-                    {step === 'report' && (
-                        <ReportCard 
-                            history={history} 
-                            totalTime={finalTime} 
-                            onRestart={() => setStep('menu')} 
-                        />
-                    )}
+                    {step === 'report' && <ReportCard history={history} totalTime={finalTime} onRestart={() => setStep('menu')} />}
                 </div>
             );
         };
