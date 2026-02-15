@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f0f9ff">
     
-    <title>Jasper P3 直式挑戰 (自動清空版)</title>
+    <title>Jasper P3 直式挑戰 (邏輯修復版 v2.5)</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,16 +29,16 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* --- 算草區樣式 (保持設計) --- */
+        /* --- 算草區樣式 (V2.1 風格) --- */
         .carry-input {
             width: 100%;
             height: 28px;
             text-align: center;
             font-size: 0.9rem;
             font-weight: bold;
-            color: #ef4444; /* 紅色字 */
+            color: #ef4444;
             background-color: transparent;
-            border: 2px dashed #fda4af; /* 虛線框 */
+            border: 2px dashed #fda4af;
             border-radius: 4px;
             outline: none;
         }
@@ -114,11 +114,10 @@
             return <span className="font-mono text-slate-400 font-bold text-xl">{Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}</span>;
         });
 
-        // --- 草稿區/進位格 (修正：加入唯一 Key 機制) ---
+        // --- 草稿區 (自動換紙功能) ---
         const CarrySlot = ({ uniqueId }) => {
             return (
                 <div className="flex items-end justify-center pb-1">
-                     {/* 使用 key 屬性強制 React 在 uniqueId 改變時重建元件，從而清空輸入框 */}
                      <input key={uniqueId} type="tel" className="carry-input math-font" />
                 </div>
             );
@@ -130,7 +129,7 @@
             const isBlank = q.blanks.includes(key);
             const value = q.digits[key];
 
-            // 隱藏前導零
+            // 視覺優化：隱藏前導零
             if (value === 0 && row === 'h' && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
             if (value === 0 && row === 't' && q.digits[`${type}_h`] === 0 && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
 
@@ -161,7 +160,6 @@
             }
         };
 
-        // --- 問題卡片 ---
         const QuestionCard = ({ q, index, userInputs, mode, feedback, onInput, onSubmit, startTime }) => {
             if (!q) return null;
 
@@ -177,53 +175,42 @@
                     <div className="flex flex-col items-center">
                         <div className="grid grid-cols-[1.5rem_3rem_3rem_3rem] md:grid-cols-[2rem_3.5rem_3.5rem_3.5rem] gap-y-1 gap-x-1 items-center justify-center">
                             
-                            {/* --- 第一步 --- */}
-                            
-                            {/* N1 */}
+                            {/* --- Step 1 --- */}
                             <div></div>
                             <DigitSlot q={q} type="n1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* Op1 N2 */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op1 === '*' ? '×' : q.op1}</div>
                             <DigitSlot q={q} type="n2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- 算草區 1 (傳入 index 作為 key，確保切換題目時清空) --- */}
                             <div></div>
                             <CarrySlot uniqueId={`${index}_1_h`} />
                             <CarrySlot uniqueId={`${index}_1_t`} />
                             <CarrySlot uniqueId={`${index}_1_o`} />
 
-                            {/* Line 1 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* R1 */}
                             <div></div>
                             <DigitSlot q={q} type="r1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- 第二步 --- */}
-
-                            {/* Op2 N3 */}
+                            {/* --- Step 2 --- */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op2 === '*' ? '×' : q.op2}</div>
                             <DigitSlot q={q} type="n3" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- 算草區 2 (傳入 index 作為 key) --- */}
                             <div></div>
                             <CarrySlot uniqueId={`${index}_2_h`} />
                             <CarrySlot uniqueId={`${index}_2_t`} />
                             <CarrySlot uniqueId={`${index}_2_o`} />
 
-                            {/* Line 2 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* R2 */}
                             <div></div>
                             <DigitSlot q={q} type="r2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
@@ -240,10 +227,7 @@
                     </div>
 
                     {mode === 'normal' && (
-                        <button 
-                            onClick={onSubmit}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xl md:text-2xl font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 mt-4"
-                        >
+                        <button onClick={onSubmit} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xl md:text-2xl font-black py-4 rounded-2xl shadow-lg transition-all active:scale-95 mt-4">
                             提交 Check
                         </button>
                     )}
@@ -328,7 +312,7 @@
             const [startTime, setStartTime] = useState(null);
             const [finalTime, setFinalTime] = useState(0);
 
-            // *** 核心邏輯：三重鎖定唯一解生成器 (Triple Lock) ***
+            // *** V2.5 核心出題引擎：嚴格邏輯鎖定 ***
             const generateQuestions = useCallback(() => {
                 let newQs = [];
                 for(let i=0; i<TOTAL_QUESTIONS; i++) {
@@ -339,6 +323,7 @@
                         let n1, n2, n3, r1, r2, op1, op2;
                         let validNums = false;
                         
+                        // 1. 生成數學算式
                         while(!validNums) {
                             op1 = ['+', '-', '*'][Math.floor(Math.random() * 3)];
                             if (op1 === '*') {
@@ -369,6 +354,7 @@
                             if (r2 > 0 && r2 < 1000) validNums = true; 
                         }
 
+                        // 2. 拆解數字
                         const getDigits = (n) => ({ h: Math.floor(n / 100), t: Math.floor((n % 100) / 10), o: n % 10 });
                         const d_n1 = getDigits(n1); const d_n2 = getDigits(n2); const d_r1 = getDigits(r1);
                         const d_n3 = getDigits(n3); const d_r2 = getDigits(r2);
@@ -381,8 +367,15 @@
                             'r2_h': d_r2.h, 'r2_t': d_r2.t, 'r2_o': d_r2.o,
                         };
 
+                        // 3. 挖空邏輯 (Multiplier Lock + Triple Lock)
+                        // 鎖定乘數：如果是乘法，絕對不挖乘數
+                        const lockedKeys = [];
+                        if (op1 === '*') lockedKeys.push('n2_o', 'n2_t', 'n2_h');
+                        if (op2 === '*') lockedKeys.push('n3_o', 'n3_t', 'n3_h');
+
                         const allKeys = Object.keys(digits).filter(k => {
-                            if (k.endsWith('_h') && digits[k] === 0) return false;
+                            if (lockedKeys.includes(k)) return false; // 乘數不准挖
+                            if (k.endsWith('_h') && digits[k] === 0) return false; // 前導零不挖
                             if (k.endsWith('_t') && digits[k.replace('_t', '_h')] === 0 && digits[k] === 0) return false;
                             return true;
                         });
@@ -390,7 +383,7 @@
                         const shuffledKeys = allKeys.sort(() => 0.5 - Math.random());
                         let currentBlanks = [];
                         
-                        // Triple Lock Logic
+                        // Triple Lock Groups (互斥組)
                         const constraintGroups = [
                             ['n1_o', 'n2_o', 'r1_o'], ['n1_t', 'n2_t', 'r1_t'], ['n1_h', 'n2_h', 'r1_h'],
                             ['r1_o', 'n3_o', 'r2_o'], ['r1_t', 'n3_t', 'r2_t'], ['r1_h', 'n3_h', 'r2_h']
@@ -400,6 +393,7 @@
                             let isAmbiguous = false;
                             const testBlanks = [...currentBlanks, key];
                             
+                            // 檢查每一列是否挖太多 (>=2 個空格 = 危險)
                             for (let group of constraintGroups) {
                                 const blanksInGroup = group.filter(k => testBlanks.includes(k));
                                 if (blanksInGroup.length >= 2) {
@@ -496,7 +490,7 @@
                         <div className="text-center bg-white p-10 rounded-[2.5rem] shadow-xl max-w-lg w-full fade-in border-4 border-white ring-4 ring-indigo-50">
                             <div className="text-6xl mb-4">🚀</div>
                             <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">Jasper P3 Challenge</h1>
-                            <p className="text-slate-500 mb-8 font-bold text-lg">完美邏輯版 (自動清空)</p>
+                            <p className="text-slate-500 mb-8 font-bold text-lg">邏輯修復版 (v2.5)</p>
                             <button onClick={startQuiz} className="w-full bg-indigo-600 text-white py-5 rounded-2xl text-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
                                 Start Game
                             </button>
