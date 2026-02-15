@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f0f9ff">
     
-    <title>Jasper P3 直式挑戰 (完美邏輯版)</title>
+    <title>Jasper P3 直式挑戰 (自動清空版)</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,7 +29,7 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* --- 算草區樣式 (保持 V2.1 設計) --- */
+        /* --- 算草區樣式 (保持設計) --- */
         .carry-input {
             width: 100%;
             height: 28px;
@@ -56,7 +56,7 @@
 
         const TOTAL_QUESTIONS = 10;
 
-        // --- 音效助手 (保持 V2.1) ---
+        // --- 音效助手 ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         
         const playSound = (type) => {
@@ -114,11 +114,12 @@
             return <span className="font-mono text-slate-400 font-bold text-xl">{Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}</span>;
         });
 
-        // --- 草稿區/進位格 ---
-        const CarrySlot = () => {
+        // --- 草稿區/進位格 (修正：加入唯一 Key 機制) ---
+        const CarrySlot = ({ uniqueId }) => {
             return (
                 <div className="flex items-end justify-center pb-1">
-                     <input type="tel" className="carry-input math-font" />
+                     {/* 使用 key 屬性強制 React 在 uniqueId 改變時重建元件，從而清空輸入框 */}
+                     <input key={uniqueId} type="tel" className="carry-input math-font" />
                 </div>
             );
         };
@@ -129,7 +130,7 @@
             const isBlank = q.blanks.includes(key);
             const value = q.digits[key];
 
-            // 隱藏不必要的 0 (視覺優化)
+            // 隱藏前導零
             if (value === 0 && row === 'h' && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
             if (value === 0 && row === 't' && q.digits[`${type}_h`] === 0 && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
 
@@ -160,7 +161,7 @@
             }
         };
 
-        // --- 問題卡片 (保持 V2.1 的雙算草區 Layout) ---
+        // --- 問題卡片 ---
         const QuestionCard = ({ q, index, userInputs, mode, feedback, onInput, onSubmit, startTime }) => {
             if (!q) return null;
 
@@ -190,11 +191,11 @@
                             <DigitSlot q={q} type="n2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- 算草區 1 (第一條橫線上方) --- */}
+                            {/* --- 算草區 1 (傳入 index 作為 key，確保切換題目時清空) --- */}
                             <div></div>
-                            <CarrySlot />
-                            <CarrySlot />
-                            <CarrySlot />
+                            <CarrySlot uniqueId={`${index}_1_h`} />
+                            <CarrySlot uniqueId={`${index}_1_t`} />
+                            <CarrySlot uniqueId={`${index}_1_o`} />
 
                             {/* Line 1 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
@@ -213,11 +214,11 @@
                             <DigitSlot q={q} type="n3" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- 算草區 2 (第二條橫線上方) --- */}
+                            {/* --- 算草區 2 (傳入 index 作為 key) --- */}
                             <div></div>
-                            <CarrySlot />
-                            <CarrySlot />
-                            <CarrySlot />
+                            <CarrySlot uniqueId={`${index}_2_h`} />
+                            <CarrySlot uniqueId={`${index}_2_t`} />
+                            <CarrySlot uniqueId={`${index}_2_o`} />
 
                             {/* Line 2 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
@@ -327,7 +328,7 @@
             const [startTime, setStartTime] = useState(null);
             const [finalTime, setFinalTime] = useState(0);
 
-            // *** 核心邏輯：三重鎖定唯一解生成器 ***
+            // *** 核心邏輯：三重鎖定唯一解生成器 (Triple Lock) ***
             const generateQuestions = useCallback(() => {
                 let newQs = [];
                 for(let i=0; i<TOTAL_QUESTIONS; i++) {
@@ -338,7 +339,6 @@
                         let n1, n2, n3, r1, r2, op1, op2;
                         let validNums = false;
                         
-                        // 1. 生成數學式 (保持 P3 混合運算)
                         while(!validNums) {
                             op1 = ['+', '-', '*'][Math.floor(Math.random() * 3)];
                             if (op1 === '*') {
@@ -369,7 +369,6 @@
                             if (r2 > 0 && r2 < 1000) validNums = true; 
                         }
 
-                        // 2. 拆分位數
                         const getDigits = (n) => ({ h: Math.floor(n / 100), t: Math.floor((n % 100) / 10), o: n % 10 });
                         const d_n1 = getDigits(n1); const d_n2 = getDigits(n2); const d_r1 = getDigits(r1);
                         const d_n3 = getDigits(n3); const d_r2 = getDigits(r2);
@@ -382,10 +381,7 @@
                             'r2_h': d_r2.h, 'r2_t': d_r2.t, 'r2_o': d_r2.o,
                         };
 
-                        // 3. 挖空邏輯 - [修改重點]：三重鎖定 (Triple Lock)
-                        // 確保每一列直式 (Operand1, Operand2, Result) 中，最多只有 1 個空格
                         const allKeys = Object.keys(digits).filter(k => {
-                            // 過濾掉前導零
                             if (k.endsWith('_h') && digits[k] === 0) return false;
                             if (k.endsWith('_t') && digits[k.replace('_t', '_h')] === 0 && digits[k] === 0) return false;
                             return true;
@@ -394,41 +390,27 @@
                         const shuffledKeys = allKeys.sort(() => 0.5 - Math.random());
                         let currentBlanks = [];
                         
-                        // 定義所有的「三元組」(直式列)
-                        // 規則：如果一個 Triple 裡已經有 >= 1 個空格，就不能再挖該 Triple 的其他數字
+                        // Triple Lock Logic
                         const constraintGroups = [
-                            ['n1_o', 'n2_o', 'r1_o'], // 第一步個位列
-                            ['n1_t', 'n2_t', 'r1_t'], // 第一步十位列
-                            ['n1_h', 'n2_h', 'r1_h'], // 第一步百位列
-                            ['r1_o', 'n3_o', 'r2_o'], // 第二步個位列
-                            ['r1_t', 'n3_t', 'r2_t'], // 第二步十位列
-                            ['r1_h', 'n3_h', 'r2_h']  // 第二步百位列
+                            ['n1_o', 'n2_o', 'r1_o'], ['n1_t', 'n2_t', 'r1_t'], ['n1_h', 'n2_h', 'r1_h'],
+                            ['r1_o', 'n3_o', 'r2_o'], ['r1_t', 'n3_t', 'r2_t'], ['r1_h', 'n3_h', 'r2_h']
                         ];
 
                         for (let key of shuffledKeys) {
                             let isAmbiguous = false;
                             const testBlanks = [...currentBlanks, key];
                             
-                            // 檢查所有約束組
                             for (let group of constraintGroups) {
-                                // 計算這個組裡面，如果挖了這個 key，總共會有幾個空格
                                 const blanksInGroup = group.filter(k => testBlanks.includes(k));
-                                // 嚴格模式：如果大於等於 2 個空格，則視為多解風險 (Ambiguous)，跳過不挖
                                 if (blanksInGroup.length >= 2) {
                                     isAmbiguous = true;
                                     break;
                                 }
                             }
-
-                            if (!isAmbiguous) {
-                                currentBlanks.push(key);
-                            }
-                            
-                            // 總共挖空數量上限 (稍微放寬一點，因為限制變嚴格了)
+                            if (!isAmbiguous) currentBlanks.push(key);
                             if (currentBlanks.length >= 5) break;
                         }
 
-                        // 確保至少有挖 2 格，不然太簡單
                         if (currentBlanks.length >= 2) {
                             validPuzzle = true;
                             puzzleData = { id: i, n1, n2, n3, r1, r2, op1, op2, digits, blanks: currentBlanks };
@@ -453,7 +435,6 @@
 
             const handleInput = (key, val) => {
                 const num = val.slice(-1).replace(/[^0-9]/g, '');
-                
                 if (mode === 'normal') {
                     setUserInputs(prev => ({ ...prev, [key]: num }));
                 } else if (mode === 'retry') {
@@ -515,7 +496,7 @@
                         <div className="text-center bg-white p-10 rounded-[2.5rem] shadow-xl max-w-lg w-full fade-in border-4 border-white ring-4 ring-indigo-50">
                             <div className="text-6xl mb-4">🚀</div>
                             <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">Jasper P3 Challenge</h1>
-                            <p className="text-slate-500 mb-8 font-bold text-lg">完美邏輯版 (三重鎖定)</p>
+                            <p className="text-slate-500 mb-8 font-bold text-lg">完美邏輯版 (自動清空)</p>
                             <button onClick={startQuiz} className="w-full bg-indigo-600 text-white py-5 rounded-2xl text-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
                                 Start Game
                             </button>
