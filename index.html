@@ -8,7 +8,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#f0f9ff">
     
-    <title>Jasper P3 直式挑戰 (唯一解+草稿區版)</title>
+    <title>Jasper P3 直式挑戰 (雙算草區版)</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,16 +29,16 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
 
-        /* --- 新增：算草區樣式 (用戶指定) --- */
+        /* --- 算草區樣式 --- */
         .carry-input {
             width: 100%;
-            height: 30px; /* 較矮 */
+            height: 28px; /* 稍微調矮一點，避免直式太長 */
             text-align: center;
             font-size: 0.9rem;
             font-weight: bold;
             color: #ef4444; /* 紅色字 */
             background-color: transparent;
-            border: 2px dashed #fda4af; /* 虛線框，稍微加粗以便點擊 */
+            border: 2px dashed #fda4af; /* 虛線框 */
             border-radius: 4px;
             outline: none;
         }
@@ -129,7 +129,6 @@
             const isBlank = q.blanks.includes(key);
             const value = q.digits[key];
 
-            // 隱藏前導零 (視覺優化)
             if (value === 0 && row === 'h' && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
             if (value === 0 && row === 't' && q.digits[`${type}_h`] === 0 && !isBlank) return <div className="w-10 h-14 md:w-12 md:h-16"></div>;
 
@@ -160,7 +159,7 @@
             }
         };
 
-        // --- 問題卡片 ---
+        // --- 問題卡片 (已修正算草區位置) ---
         const QuestionCard = ({ q, index, userInputs, mode, feedback, onInput, onSubmit, startTime }) => {
             if (!q) return null;
 
@@ -174,46 +173,56 @@
                     </div>
 
                     <div className="flex flex-col items-center">
-                        {/* Grid 結構：新增最上層的算草區 */}
+                        {/* Grid 結構：4欄 (Symbol, H, T, O) */}
                         <div className="grid grid-cols-[1.5rem_3rem_3rem_3rem] md:grid-cols-[2rem_3.5rem_3.5rem_3.5rem] gap-y-1 gap-x-1 items-center justify-center">
                             
-                            {/* --- Row 0: 算草區 (Carry/Drafting) --- */}
-                            <div></div> {/* 符號欄空白 */}
-                            <CarrySlot />
-                            <CarrySlot />
-                            <CarrySlot />
-
-                            {/* --- Row 1: N1 --- */}
+                            {/* --- 第一步 --- */}
+                            
+                            {/* N1 */}
                             <div></div>
                             <DigitSlot q={q} type="n1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- Row 2: Op1 N2 --- */}
+                            {/* Op1 N2 */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op1 === '*' ? '×' : q.op1}</div>
                             <DigitSlot q={q} type="n2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n2" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
+                            {/* --- 算草區 1 (第一條橫線上方) --- */}
+                            <div></div> {/* 符號欄空白 */}
+                            <CarrySlot />
+                            <CarrySlot />
+                            <CarrySlot />
+
                             {/* Line 1 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* --- Row 3: R1 --- */}
+                            {/* R1 */}
                             <div></div>
                             <DigitSlot q={q} type="r1" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r1" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
-                            {/* --- Row 4: Op2 N3 --- */}
+                            {/* --- 第二步 --- */}
+
+                            {/* Op2 N3 */}
                             <div className="text-2xl md:text-3xl font-bold text-slate-400 text-center">{q.op2 === '*' ? '×' : q.op2}</div>
                             <DigitSlot q={q} type="n3" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="n3" row="o" userInputs={userInputs} mode={mode} onInput={onInput} />
 
+                            {/* --- 算草區 2 (第二條橫線上方) --- */}
+                            <div></div> {/* 符號欄空白 */}
+                            <CarrySlot />
+                            <CarrySlot />
+                            <CarrySlot />
+
                             {/* Line 2 */}
                             <div className="col-span-4 h-1 bg-slate-800 rounded-full my-1"></div>
 
-                            {/* --- Row 5: R2 --- */}
+                            {/* R2 */}
                             <div></div>
                             <DigitSlot q={q} type="r2" row="h" userInputs={userInputs} mode={mode} onInput={onInput} />
                             <DigitSlot q={q} type="r2" row="t" userInputs={userInputs} mode={mode} onInput={onInput} />
@@ -318,7 +327,7 @@
             const [startTime, setStartTime] = useState(null);
             const [finalTime, setFinalTime] = useState(0);
 
-            // *** 核心邏輯修正：唯一解生成器 ***
+            // *** 核心邏輯：唯一解生成器 ***
             const generateQuestions = useCallback(() => {
                 let newQs = [];
                 for(let i=0; i<TOTAL_QUESTIONS; i++) {
@@ -373,9 +382,8 @@
                             'r2_h': d_r2.h, 'r2_t': d_r2.t, 'r2_o': d_r2.o,
                         };
 
-                        // 3. 挖空與唯一解檢查 (關鍵修正)
+                        // 3. 挖空與唯一解檢查
                         const allKeys = Object.keys(digits).filter(k => {
-                            // 不挖前導零
                             if (k.endsWith('_h') && digits[k] === 0) return false;
                             if (k.endsWith('_t') && digits[k.replace('_t', '_h')] === 0 && digits[k] === 0) return false;
                             return true;
@@ -384,21 +392,17 @@
                         const shuffledKeys = allKeys.sort(() => 0.5 - Math.random());
                         let currentBlanks = [];
                         
-                        // 定義互斥組：同一行運算數不可同時挖空 (例如 n1_o 和 n2_o 不能同時為空)
+                        // 互斥組檢查
                         const conflictPairs = [
-                            ['n1_o', 'n2_o'], ['n1_t', 'n2_t'], ['n1_h', 'n2_h'], // Step 1 Conflicts
-                            ['r1_o', 'n3_o'], ['r1_t', 'n3_t'], ['r1_h', 'n3_h']  // Step 2 Conflicts
+                            ['n1_o', 'n2_o'], ['n1_t', 'n2_t'], ['n1_h', 'n2_h'], 
+                            ['r1_o', 'n3_o'], ['r1_t', 'n3_t'], ['r1_h', 'n3_h']
                         ];
 
                         for (let key of shuffledKeys) {
-                            // 檢查是否會造成互斥
                             let isConflict = false;
-                            
-                            // 預設將此 key 加入測試
                             const testBlanks = [...currentBlanks, key];
                             
                             for (let pair of conflictPairs) {
-                                // 如果這一對都在目前的挖空名單中，則產生衝突 (無限多解)
                                 if (testBlanks.includes(pair[0]) && testBlanks.includes(pair[1])) {
                                     isConflict = true;
                                     break;
@@ -408,7 +412,6 @@
                             if (!isConflict) {
                                 currentBlanks.push(key);
                             }
-                            
                             if (currentBlanks.length >= 4) break;
                         }
 
@@ -498,7 +501,7 @@
                         <div className="text-center bg-white p-10 rounded-[2.5rem] shadow-xl max-w-lg w-full fade-in border-4 border-white ring-4 ring-indigo-50">
                             <div className="text-6xl mb-4">🚀</div>
                             <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-2">Jasper P3 Challenge</h1>
-                            <p className="text-slate-500 mb-8 font-bold text-lg">唯一解驗證 + 草稿區升級版</p>
+                            <p className="text-slate-500 mb-8 font-bold text-lg">唯一解驗證 + 雙算草區版</p>
                             <button onClick={startQuiz} className="w-full bg-indigo-600 text-white py-5 rounded-2xl text-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">
                                 Start Game
                             </button>
